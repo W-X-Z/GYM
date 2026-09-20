@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import path from 'node:path';
+const root=path.resolve(import.meta.dirname,'..');
+let three=fs.readFileSync(path.join(root,'vendor/three.module.js'),'utf8');
+three=three.replace(/export\{([^}]+)\};?\s*$/,(_,items)=>'return {'+items.split(',').map(item=>{const [local,name]=item.trim().split(/\s+as\s+/);return `${name||local}:${local}`;}).join(',')+'};');
+let game=fs.readFileSync(path.join(root,'src/game.js'),'utf8').replace(/export /g,'');
+let software=fs.readFileSync(path.join(root,'src/software-renderer.js'),'utf8').replace(/^import .*;\n/gm,'').replace(/export /g,'');
+let scene=fs.readFileSync(path.join(root,'src/scene.js'),'utf8').replace(/^import .*;\n/gm,'').replace(/export /g,'');
+let main=fs.readFileSync(path.join(root,'src/main.js'),'utf8').replace(/^import .*;\n/gm,'');
+const bundle=`const THREE=(()=>{${three}})();\n${game}\n${software}\n${scene}\n${main}`;
+const css=fs.readFileSync(path.join(root,'style.css'),'utf8');
+let html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace('<link rel="stylesheet" href="style.css">',`<style>${css}</style>`).replace('<script type="module" src="src/main.js"></script>',()=>`<script type="module">${bundle.replace(/<\/script/gi,'<\\/script')}</script>`);
+fs.writeFileSync(path.join(root,'gym-mvp.html'),html);
+console.log(`Built offline gym-mvp.html (${Math.round(Buffer.byteLength(html)/1024)} KB)`);
